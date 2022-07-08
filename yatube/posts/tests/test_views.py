@@ -317,6 +317,7 @@ class GroupViewTest(TestCase):
 
     def setUp(self):
         self.authorized_author.force_login(self.author)
+        cache.clear()
 
     def test_post_in_index(self):
         """Пост при создании с указанной группой
@@ -381,6 +382,7 @@ class FollowViewTest(TestCase):
         cls.author_1 = User.objects.create_user(username='Follower_1')
         cls.user = User.objects.create_user(username='Following')
         cls.authorized_author = Client()
+        cls.authorized_user = Client()
         cls.post_author = Post.objects.create(
             text='Лол',
             author=cls.author,
@@ -392,6 +394,7 @@ class FollowViewTest(TestCase):
 
     def setUp(self):
         self.authorized_author.force_login(self.author)
+        self.authorized_user.force_login(self.user)
 
     def test_profile_follow(self):
         """Авторизованный польззователь может подписываться на других
@@ -448,9 +451,38 @@ class FollowViewTest(TestCase):
         self.assertEqual(count_posts_before, count_posts_after)
 
     def test_new_post_appears_for_followers(self):
-        response = self.authorized_author.get(reverse(
+        """Новая запись пользователя появляется в ленте тех,
+        кто на него подписан.
+        """
+        Follow.objects.create(
+            author=self.author_1,
+            user=self.user,
+        )
+        Post.objects.create(
+            text='Тест1',
+            author=self.author_1,
+        )
+        response = self.authorized_user.get(reverse(
             'posts:follow_index',
         ))
-        self.assertIn(
-            response.context['page_obj'][0].author.id, self.author.id
+        self.assertEqual(
+            response.context['page_obj'][0].author.id, self.author_1.id
+        )
+    def test_new_post_appears_for_followers(self):
+        """Новая запись пользователя не появляется в ленте тех,
+        кто на него не подписан.
+        """
+        Follow.objects.create(
+            author=self.author,
+            user=self.user,
+        )
+        Post.objects.create(
+            text='Тест2',
+            author=self.author_1,
+        )
+        response = self.authorized_user.get(reverse(
+            'posts:follow_index',
+        ))
+        self.assertNotEqual(
+            response.context['page_obj'][0].author.id, self.author_1.id
         )

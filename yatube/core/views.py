@@ -7,3 +7,6 @@ def page_not_found(request, exception):
 
 def csrf_failure(request, reason=''):
     return render(request, 'core/403csrf.html')
+
+def custom_failure(request, reason=''):
+    return render(request, 'core/500.html')

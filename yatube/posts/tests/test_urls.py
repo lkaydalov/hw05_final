@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -30,6 +31,7 @@ class PostURLTests(TestCase):
         self.authorized_author.force_login(self.author)
         self.authorized_not_author = Client()
         self.authorized_not_author.force_login(self.user_not_author)
+        cache.clear()
 
     def test_pages_for_all_authorized_author(self):
         """Проверка  доступа авторизованного пользователя ко всем страницам."""
