@@ -113,6 +113,7 @@ def post_edit(request, post_id):
 
 @login_required
 def add_comment(request, post_id):
+    """Добавляем комментарии к постам."""
     post = get_object_or_404(
         Post.objects.select_related('author', 'group'), pk=post_id
     )
@@ -127,7 +128,7 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    # author_ids = request.user.follower.values_list('author_id', flat=True)
+    """Позволяет отслеживать избранных авторов."""
     posts = Post.objects.filter(author__following__user=request.user)
     context = get_page(posts, request)
     return render(request, 'posts/follow.html', context)
@@ -135,6 +136,7 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
+    """Позволяет подписаться на автора."""
     author = get_object_or_404(User, username=username)
     if (
         request.user == author
@@ -150,6 +152,7 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
+    """Позволяет отписаться от автора."""
     Follow.objects.filter(
         user=request.user, author__username=username
     ).delete()

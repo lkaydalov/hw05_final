@@ -401,7 +401,9 @@ class FollowViewTest(TestCase):
         пользователей.
         """
         count_before = Follow.objects.count()
-        count_posts_before = Post.objects.filter(author__following__user=self.author).count()
+        count_posts_before = Post.objects.filter(
+            author__following__user=self.author
+        ).count()
         self.authorized_author.post(
             reverse('posts:profile_follow', kwargs={
                 'username': f'{self.author_1.username}'
@@ -419,7 +421,9 @@ class FollowViewTest(TestCase):
         пользователей.
         """
         count_before = Follow.objects.count()
-        count_posts_before = Post.objects.filter(author__follower__user=self.author).count()
+        count_posts_before = Post.objects.filter(
+            author__follower__user=self.author
+        ).count()
         self.client.post(
             reverse('posts:profile_follow', kwargs={
                 'username': f'{self.author_1.username}'
@@ -437,7 +441,9 @@ class FollowViewTest(TestCase):
         других пользователей из подписок.
         """
         count_before = Follow.objects.count()
-        count_posts_before = Post.objects.filter(author__follower__user=self.author).count()
+        count_posts_before = Post.objects.filter(
+            author__follower__user=self.author
+        ).count()
         self.authorized_author.post(
             reverse('posts:profile_unfollow', kwargs={
                 'username': f'{self.author_1.username}'
@@ -462,12 +468,14 @@ class FollowViewTest(TestCase):
             text='Тест1',
             author=self.author_1,
         )
+
         response = self.authorized_user.get(reverse(
             'posts:follow_index',
         ))
         self.assertEqual(
             response.context['page_obj'][0].author.id, self.author_1.id
         )
+
     def test_new_post_appears_for_followers(self):
         """Новая запись пользователя не появляется в ленте тех,
         кто на него не подписан.
