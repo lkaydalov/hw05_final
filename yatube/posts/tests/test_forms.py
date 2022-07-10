@@ -76,6 +76,7 @@ class PostCreateFormTests(TestCase):
 
         form_data = {
             'text': 'Текст из формы',
+            'author': self.author,
             'group': self.group.id,
             'image': self.uploaded,
         }
@@ -91,11 +92,11 @@ class PostCreateFormTests(TestCase):
             )
         )
         self.assertEqual(Post.objects.count(), post_count + 1)
+        self.assertEqual(Post.objects.first().text, form_data['text'])
+        self.assertEqual(Post.objects.first().group.id, form_data['group'])
+        self.assertEqual(Post.objects.first().author, form_data['author'])
         self.assertTrue(
             Post.objects.filter(
-                text='Текст из формы',
-                author=self.author,
-                group=self.group,
                 image='posts/small.gif',
             ).exists()
         )
@@ -107,6 +108,7 @@ class PostCreateFormTests(TestCase):
         post_count = Post.objects.count()
         form_data = {
             'text': 'Текст из формы редактирования',
+            'author': self.author,
             'group': self.group.id,
             'image': self.uploaded_edit,
         }
@@ -122,11 +124,17 @@ class PostCreateFormTests(TestCase):
             'posts:post_detail', kwargs={'post_id': f'{self.post.id}'}
         ))
         self.assertEqual(Post.objects.count(), post_count)
+        self.assertEqual(
+            Post.objects.get(id=self.post.id).text, form_data['text']
+        )
+        self.assertEqual(
+            Post.objects.get(id=self.post.id).author, form_data['author']
+        )
+        self.assertEqual(
+            Post.objects.get(id=self.post.id).group.id, form_data['group']
+        )
         self.assertTrue(
             Post.objects.filter(
-                text='Текст из формы редактирования',
-                author=self.author,
-                group=self.group,
                 image='posts/big.gif'
             ).exists()
         )
@@ -138,12 +146,12 @@ class PostCreateFormTests(TestCase):
         comment_count = Comment.objects.count()
 
         form_data = {
-            'post': self.post,
-            'author': self.authorized_author,
             'text': 'тестим комменты',
         }
         response = self.authorized_author.post(
-            reverse('posts:add_comment', args=('1',)),
+            reverse('posts:add_comment', kwargs={
+                'post_id': f'{self.post.id}'
+            }),
             data=form_data,
             follow=True,
         )
@@ -153,3 +161,24 @@ class PostCreateFormTests(TestCase):
             })
         )
         self.assertEqual(Comment.objects.count(), comment_count + 1)
+        self.assertEqual(
+            Comment.objects.get(id=self.post.id).text, form_data['text']
+        )
+
+    def test_unauthorized_user_comment(self):
+        """Валидная форма не создает комментарий для
+        авторизованного пользователя.
+        """
+        comment_count = Comment.objects.count()
+
+        form_data = {
+            'text': 'тестим комменты_111',
+        }
+        self.client.post(
+            reverse('posts:add_comment', kwargs={
+                'post_id': f'{self.post.id}'
+            }),
+            data=form_data,
+            follow=True,
+        )
+        self.assertEqual(Comment.objects.count(), comment_count)

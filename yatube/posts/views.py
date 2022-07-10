@@ -41,7 +41,9 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
     user = request.user
-    following = user.is_authenticated and author.following.exists()
+    following = user.is_authenticated and author.following.exists(
+    ) and user.follower.exists()
+
     template = 'posts/profile.html'
     context = {
         'author': author,
@@ -58,7 +60,7 @@ def post_detail(request, post_id):
         Post.objects.select_related('author', 'group'), pk=post_id
     )
     form = CommentForm(request.POST or None)
-    comments = Comment.objects.select_related('post')
+    comments = Comment.objects.filter(post__pk=post_id)
     context = {
         'post': post,
         'form': form,
@@ -114,15 +116,14 @@ def post_edit(request, post_id):
 @login_required
 def add_comment(request, post_id):
     """Добавляем комментарии к постам."""
-    post = get_object_or_404(
-        Post.objects.select_related('author', 'group'), pk=post_id
-    )
+    post = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST or None)
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user
         comment.post = post
         comment.save()
+
     return redirect('posts:post_detail', post_id=post_id)
 
 
@@ -131,6 +132,7 @@ def follow_index(request):
     """Позволяет отслеживать избранных авторов."""
     posts = Post.objects.filter(author__following__user=request.user)
     context = get_page(posts, request)
+
     return render(request, 'posts/follow.html', context)
 
 
@@ -141,12 +143,14 @@ def profile_follow(request, username):
     if (
         request.user == author
         or Follow.objects.filter(
-            user=request.user, author__username=username
+            user=request.user, author=author
         ).exists()
     ):
+
         return redirect('posts:profile', username=username)
 
     Follow.objects.create(user=request.user, author=author)
+
     return redirect('posts:profile', username=username)
 
 
@@ -156,4 +160,5 @@ def profile_unfollow(request, username):
     Follow.objects.filter(
         user=request.user, author__username=username
     ).delete()
+
     return redirect('posts:profile', username=username)

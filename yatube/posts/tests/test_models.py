@@ -24,11 +24,9 @@ class PostModelTest(TestCase):
 
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
-        group = PostModelTest.group
-        post = PostModelTest.post
         str_names = {
-            post.text[:SYMBOLS_PER_POST]: str(post),
-            group.title: str(group),
+            self.post.text[:SYMBOLS_PER_POST]: str(self.post),
+            self.group.title: str(self.group),
         }
 
         for model, expected_value in str_names.items():

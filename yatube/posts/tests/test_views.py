@@ -9,7 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Group, Post, Follow
+from posts.models import Group, Post, Follow, Comment
 from ..constants import (POSTS_PER_PAGE,
                          POSTS_PER_PAGE_TEST,
                          TEST_POSTS_QUANTITY)
@@ -92,6 +92,9 @@ class PostViewTests(TestCase):
             kwargs={'slug': f'{self.group.slug}'},
         ))
         self.assertEqual(
+            response.context['group'], self.group,
+        )
+        self.assertEqual(
             response.context['group'].title, self.group.title
         )
         self.assertEqual(
@@ -132,13 +135,21 @@ class PostViewTests(TestCase):
                     response.context['page_obj'][0].image.name,
                     'posts/small.gif',
                 )
+                self.assertEqual(
+                    response.context['page_obj'][0].id,
+                    self.post.id,
+                )
 
     def test_post_detail_page_context(self):
         """Проверяем контекст страницы деталей поста."""
+        self.comment = Comment.objects.create(
+            text='test11', author=self.author, post=self.post
+        )
         response = self.authorized_author.get(reverse(
             'posts:post_detail',
             kwargs={'post_id': f'{self.post.id}'},
         ))
+        self.assertEqual(response.context['post'], self.post)
         self.assertEqual(response.context['post'].id, self.post.id)
         self.assertEqual(
             response.context['post'].group.title, self.group.title
@@ -149,6 +160,9 @@ class PostViewTests(TestCase):
             response.context['post'].image.name,
             'posts/small.gif',
         )
+        self.assertEqual(
+            response.context['comments'][0].id,
+            self.comment.id)
 
     def test_post_create_page_context(self):
         """Проверяем контекст страницы создания поста."""
@@ -178,6 +192,10 @@ class PostViewTests(TestCase):
         self.assertEqual(
             resposne.context['author'].get_full_name, self.author.get_full_name
         )
+        self.assertEqual(
+            resposne.context['page_obj'][0].id,
+            self.post.id,
+        )
 
     def test_post_edit_page_context(self):
         """Проверяем контекст страницы редактирования поста."""
@@ -192,6 +210,9 @@ class PostViewTests(TestCase):
             with self.subTest(value=value):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
+        self.assertEqual(
+            response.context['post'].id, self.post.id
+        )
 
     def test_index_cache_20_seconds(self):
         """Проверяем кэш."""
@@ -445,6 +466,11 @@ class FollowViewTest(TestCase):
             author__follower__user=self.author
         ).count()
         self.authorized_author.post(
+            reverse('posts:profile_follow', kwargs={
+                'username': f'{self.author_1.username}'
+            })
+        )
+        self.authorized_author.post(
             reverse('posts:profile_unfollow', kwargs={
                 'username': f'{self.author_1.username}'
             })
@@ -464,7 +490,7 @@ class FollowViewTest(TestCase):
             author=self.author_1,
             user=self.user,
         )
-        Post.objects.create(
+        self.post = Post.objects.create(
             text='Тест1',
             author=self.author_1,
         )
@@ -473,7 +499,7 @@ class FollowViewTest(TestCase):
             'posts:follow_index',
         ))
         self.assertEqual(
-            response.context['page_obj'][0].author.id, self.author_1.id
+            response.context['page_obj'][0].post.id, self.post.id
         )
 
     def test_new_post_appears_for_followers(self):
@@ -484,7 +510,7 @@ class FollowViewTest(TestCase):
             author=self.author,
             user=self.user,
         )
-        Post.objects.create(
+        self.postunauth = Post.objects.create(
             text='Тест2',
             author=self.author_1,
         )
@@ -492,5 +518,5 @@ class FollowViewTest(TestCase):
             'posts:follow_index',
         ))
         self.assertNotEqual(
-            response.context['page_obj'][0].author.id, self.author_1.id
+            response.context['page_obj'][0].id, self.postunauth.id
         )

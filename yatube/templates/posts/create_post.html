@@ -1,52 +1,49 @@
 {% extends 'base.html' %}
-{%block title%}
-  {% if is_edit %}
-    Редактировать запись 
-  {% else %}
-    Новый пост
-  {% endif %} 
-{% endblock%}
-{% block content %}
-  <main>
-    <div class="container py-5">
-      <div class="row justify-content-center">
-        <div class="col-md-8 p-5">
-          <div class="card">
-            <div class="card-header">       
-              {% if is_edit %}
-                Редактировать запись 
-              {% else %}
-                Новый пост
-              {% endif %}            
-            </div>
-            <div class="card-body">        
-              {% include 'includes/field_errors.html' %}
-              {% with request.resolver_match.view_name as view_name %}
-              {% if view_name  == 'posts:post_create' %}
+  {%block title%}
+    {% if is_edit %}
+      Редактировать запись 
+    {% else %}
+      Новый пост
+    {% endif %} 
+  {% endblock%}
+  {% block content %}
+    <main>
+      <div class="container py-5">
+        <div class="row justify-content-center">
+          <div class="col-md-8 p-5">
+            <div class="card">
+              <div class="card-header">       
+                {% if is_edit %}
+                  Редактировать запись 
+                {% else %}
+                  Новый пост
+                {% endif %}            
+              </div>
+              <div class="card-body">        
+                {% include 'includes/field_errors.html' %}
+                {% if is_edit %}
+                  <form method="post" enctype="multipart/form-data" action="{% url 'posts:post_edit' post.id %}">
+                {% else %}
                 <form method="post" enctype="multipart/form-data" action="{% url 'posts:post_create' %}">
-              {% endif %}
-              {% if view_name  == 'posts:post_edit' %}
-                <form method="post" enctype="multipart/form-data" action="{% url 'posts:post_edit' post.id %}">
-              {% endif %}
-              {% csrf_token %}
-                {% for field in form %}
-                  {% include 'includes/field_form.html' %}
-                {% endfor %}
-                {% endwith %}
-                  <div class="d-flex justify-content-end">
-                    <button type="submit" class="btn btn-primary">
-                      {% if is_edit %}
-                        Сохранить 
-                      {% else %}
-                        Добавить
-                      {% endif %} 
-                    </button>
-                  </div>
-                </form>
+                {% endif %}
+                {% csrf_token %}
+                  {% for field in form %}
+                    {% include 'includes/field_form.html' %}
+                  {% endfor %}
+                    <div class="d-flex justify-content-end">
+                      <button type="submit" class="btn btn-primary">
+                        {% if is_edit %}
+                          Сохранить 
+                        {% else %}
+                          Добавить
+                        {% endif %} 
+                      </button>
+                    </div>
+                  </form>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
-{% endblock %}
+    </main>
+  {% endblock %}

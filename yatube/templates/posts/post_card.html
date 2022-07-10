@@ -2,7 +2,7 @@
 {% with request.resolver_match.view_name as view_name %}
 <article> 
   <ul>
-    {% if view_name  == 'posts:index' or view_name == 'posts:group_list' %}
+    {% if view_name  != 'posts:profile' %}
       <li>
         Автор: {{ post.author.get_full_name }}
         <a href="{% url 'posts:profile' post.author %}">все посты пользователя </a>

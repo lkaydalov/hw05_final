@@ -16,7 +16,7 @@ class PostURLTests(TestCase):
         super().setUpClass()
         cls.author = User.objects.create_user(username='Writer')
         cls.user_not_author = User.objects.create_user(username='not_author')
-        Group.objects.create(
+        cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
             description='Тестовое описание',
@@ -24,6 +24,7 @@ class PostURLTests(TestCase):
         cls.post = Post.objects.create(
             text='Тестовый пост',
             author=cls.author,
+            group=cls.group,
         )
 
     def setUp(self):
@@ -37,10 +38,10 @@ class PostURLTests(TestCase):
         """Проверка  доступа авторизованного пользователя ко всем страницам."""
         pages = [
             '/',
-            '/group/test-slug/',
-            '/profile/Writer/',
-            '/posts/1/',
-            '/posts/1/edit/',
+            f'/group/{self.group.slug}/',
+            f'/profile/{self.author.username}/',
+            f'/posts/{self.post.id}/',
+            f'/posts/{self.post.id}/edit/',
             '/create/'
         ]
         for page in pages:
@@ -55,7 +56,9 @@ class PostURLTests(TestCase):
             reverse('posts:add_comment', kwargs={'post_id': f'{self.post.id}'})
         )
         self.assertRedirects(
-            resposne, ('/posts/1/')
+            resposne, reverse(
+                'posts:post_detail', kwargs={'post_id': f'{self.post.id}'}
+            )
         )
 
     def test_add_comment_not_authorized_author_(self):
@@ -64,7 +67,7 @@ class PostURLTests(TestCase):
             reverse('posts:add_comment', kwargs={'post_id': f'{self.post.id}'})
         )
         self.assertRedirects(
-            resposne, ('/auth/login/?next=/posts/1/comment/')
+            resposne, (f'/auth/login/?next=/posts/{self.post.id}/comment/')
         )
 
     def test_post_edit_url_redirect_not_author(self):
@@ -72,10 +75,10 @@ class PostURLTests(TestCase):
         на страницу просмотра поста.
         """
         response = self.authorized_not_author.get(
-            '/posts/1/edit/', follow=True,
+            f'/posts/{self.post.id}/edit/', follow=True,
         )
         self.assertRedirects(
-            response, ('/posts/1/')
+            response, (f'/posts/{self.post.id}/')
         )
 
     def test_unexisting_page(self):
@@ -88,10 +91,10 @@ class PostURLTests(TestCase):
         templates_url_names = {
             '/': 'posts/index.html',
             '/create/': 'posts/create_post.html',
-            '/posts/1/': 'posts/post_detail.html',
-            '/profile/Writer/': 'posts/profile.html',
-            '/group/test-slug/': 'posts/group_list.html',
-            '/posts/1/edit/': 'posts/create_post.html',
+            f'/posts/{self.post.id}/': 'posts/post_detail.html',
+            f'/profile/{self.author.username}/': 'posts/profile.html',
+            f'/group/{self.group.slug}/': 'posts/group_list.html',
+            f'/posts/{self.post.id}/edit/': 'posts/create_post.html',
         }
 
         for address, template in templates_url_names.items():
@@ -102,7 +105,8 @@ class PostURLTests(TestCase):
     def test_pages_for_all_guest_clients(self):
         """Проверка доступа гостя к приватным страницам."""
         pages = {
-            '/posts/1/edit/': '/auth/login/?next=/posts/1/edit/',
+            f'/posts/{self.post.id}/edit/':
+            f'/auth/login/?next=/posts/{self.post.id}/edit/',
             '/create/': '/auth/login/?next=/create/',
         }
         for page, redirects in pages.items():
