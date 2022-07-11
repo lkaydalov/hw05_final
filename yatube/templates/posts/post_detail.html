@@ -22,7 +22,7 @@
             Автор: {{ post.author.get_full_name }} 
           </li>
           <li class="list-group-item d-flex justify-content-between align-items-center">
-            {%include 'posts/author_card.html' with author=post.author %}
+            {% include 'posts/author_card.html' with author=post.author %}
           </li>
           <li class="list-group-item">
             <a href="{% url 'posts:profile' post.author %}">

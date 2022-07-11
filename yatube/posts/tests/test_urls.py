@@ -35,7 +35,7 @@ class PostURLTests(TestCase):
         cache.clear()
 
     def test_pages_for_all_authorized_author(self):
-        """Проверка  доступа авторизованного пользователя ко всем страницам."""
+        """Проверка доступа авторизованного пользователя ко всем страницам."""
         pages = [
             '/',
             f'/group/{self.group.slug}/',
@@ -47,6 +47,20 @@ class PostURLTests(TestCase):
         for page in pages:
             with self.subTest(page=page):
                 response = self.authorized_author.get(page)
+                self.assertEqual(response.status_code, HTTPStatus.OK,
+                                 f'Ошибка доступа к странице {page}')
+
+    def test_pages_for_all_guest_clients(self):
+        """Проверка доступа гостя к публичным страницам."""
+        pages = [
+            '/',
+            f'/group/{self.group.slug}/',
+            f'/profile/{self.author.username}/',
+            f'/posts/{self.post.id}/',
+        ]
+        for page in pages:
+            with self.subTest(page=page):
+                response = self.client.get(page)
                 self.assertEqual(response.status_code, HTTPStatus.OK,
                                  f'Ошибка доступа к странице {page}')
 

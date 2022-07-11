@@ -3,6 +3,7 @@ import tempfile
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -65,8 +66,20 @@ class PostCreateFormTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        cache.clear()
         self.authorized_author = Client()
         self.authorized_author.force_login(self.author)
+
+    def body_test(self, first_object, form_data):
+        """Проверка полей поста."""
+        self.assertEqual(first_object.text, form_data['text'])
+        self.assertEqual(
+            first_object.author.username, self.post.author.username
+        )
+        self.assertEqual(first_object.group.id, form_data['group'])
+        self.assertEqual(
+            first_object.image.name, f"posts/{form_data['image'].name}"
+        )
 
     def test_authorized_user_creates_post(self):
         """Валидная форма создает запись в Post для
@@ -80,26 +93,14 @@ class PostCreateFormTests(TestCase):
             'group': self.group.id,
             'image': self.uploaded,
         }
-        response = self.authorized_author.post(
+        self.authorized_author.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True,
         )
-
-        self.assertRedirects(
-            response, reverse(
-                'posts:profile', kwargs={'username': f'{self.author.username}'}
-            )
-        )
+        first_object = Post.objects.first()
         self.assertEqual(Post.objects.count(), post_count + 1)
-        self.assertEqual(Post.objects.first().text, form_data['text'])
-        self.assertEqual(Post.objects.first().group.id, form_data['group'])
-        self.assertEqual(Post.objects.first().author, form_data['author'])
-        self.assertTrue(
-            Post.objects.filter(
-                image='posts/small.gif',
-            ).exists()
-        )
+        self.body_test(first_object, form_data)
 
     def test_authorized_user_edits_post(self):
         """Валидная форма редактирует запись в Post
@@ -119,25 +120,12 @@ class PostCreateFormTests(TestCase):
             data=form_data,
             follow=True,
         )
-
+        first_object = Post.objects.get(id=self.post.id)
+        self.body_test(first_object, form_data)
         self.assertRedirects(response, reverse(
             'posts:post_detail', kwargs={'post_id': f'{self.post.id}'}
         ))
         self.assertEqual(Post.objects.count(), post_count)
-        self.assertEqual(
-            Post.objects.get(id=self.post.id).text, form_data['text']
-        )
-        self.assertEqual(
-            Post.objects.get(id=self.post.id).author, form_data['author']
-        )
-        self.assertEqual(
-            Post.objects.get(id=self.post.id).group.id, form_data['group']
-        )
-        self.assertTrue(
-            Post.objects.filter(
-                image='posts/big.gif'
-            ).exists()
-        )
 
     def test_authorized_user_comment(self):
         """Валидная форма создает комментарий для
@@ -162,7 +150,7 @@ class PostCreateFormTests(TestCase):
         )
         self.assertEqual(Comment.objects.count(), comment_count + 1)
         self.assertEqual(
-            Comment.objects.get(id=self.post.id).text, form_data['text']
+            Comment.objects.last().text, form_data['text']
         )
 
     def test_unauthorized_user_comment(self):

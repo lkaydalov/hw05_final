@@ -10,6 +10,6 @@
         {% include 'posts/post_card.html' %}
         {% if not forloop.last %}<hr>{% endif %}
       {% endfor %}
+      {% include 'posts/paginator.html' %}
     </div>
-    {% include 'posts/paginator.html' %}
   {% endblock %} 

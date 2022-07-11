@@ -94,15 +94,6 @@ class PostViewTests(TestCase):
         self.assertEqual(
             response.context['group'], self.group,
         )
-        self.assertEqual(
-            response.context['group'].title, self.group.title
-        )
-        self.assertEqual(
-            response.context['group'].slug, self.group.slug
-        )
-        self.assertEqual(
-            response.context['group'].description, self.group.description
-        )
 
     def test_main_pages_context(self):
         """Проверяем контекст paje_obj у страниц:
@@ -120,23 +111,24 @@ class PostViewTests(TestCase):
         for address in pages:
             with self.subTest(address=address):
                 response = self.authorized_author.get(address)
+                context = response.context['page_obj'][0]
                 self.assertEqual(
-                    response.context['page_obj'][0].text, self.post.text
+                    context.text, self.post.text
                 )
                 self.assertEqual(
-                    response.context['page_obj'][0].author.username,
+                    context.author.username,
                     self.author.username,
                 )
                 self.assertEqual(
-                    response.context['page_obj'][0].group.title,
+                    context.group.title,
                     self.group.title,
                 )
                 self.assertEqual(
-                    response.context['page_obj'][0].image.name,
+                    context.image.name,
                     'posts/small.gif',
                 )
                 self.assertEqual(
-                    response.context['page_obj'][0].id,
+                    context.id,
                     self.post.id,
                 )
 
@@ -152,13 +144,12 @@ class PostViewTests(TestCase):
         self.assertEqual(response.context['post'], self.post)
         self.assertEqual(response.context['post'].id, self.post.id)
         self.assertEqual(
-            response.context['post'].group.title, self.group.title
+            response.context['post'].group, self.post.group
         )
-        self.assertEqual(response.context['post'].group.id, self.group.id)
-        self.assertEqual(response.context['post'].author, self.author)
+        self.assertEqual(response.context['post'].author, self.post.author)
         self.assertEqual(
             response.context['post'].image.name,
-            'posts/small.gif',
+            self.post.image.name,
         )
         self.assertEqual(
             response.context['comments'][0].id,
@@ -184,23 +175,13 @@ class PostViewTests(TestCase):
             })
         )
         self.assertEqual(
-            resposne.context['author'].username, self.author.username
-        )
-        self.assertEqual(
-            resposne.context['author'].posts.count, self.author.posts.count
-        )
-        self.assertEqual(
-            resposne.context['author'].get_full_name, self.author.get_full_name
-        )
-        self.assertEqual(
-            resposne.context['page_obj'][0].id,
-            self.post.id,
+            resposne.context['author'], self.post.author
         )
 
     def test_post_edit_page_context(self):
         """Проверяем контекст страницы редактирования поста."""
         response = self.authorized_author.get(
-            reverse('posts:post_edit', kwargs={'post_id': '1'})
+            reverse('posts:post_edit', kwargs={'post_id': f'{self.post.id}'})
         )
         form_fields = {
             'text': forms.fields.CharField,
@@ -211,7 +192,7 @@ class PostViewTests(TestCase):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
         self.assertEqual(
-            response.context['post'].id, self.post.id
+            response.context['post'], self.post
         )
 
     def test_index_cache_20_seconds(self):
@@ -344,10 +325,16 @@ class GroupViewTest(TestCase):
         """Пост при создании с указанной группой
         отображается на главной странице.
         """
+        initial_count = Post.objects.count()
+        Post.objects.create(
+            author=self.author,
+            group=self.group,
+            text='Ещё один пост',
+        )
         response = self.authorized_author.get(
             reverse('posts:index'))
         self.assertEqual(
-            len(response.context['page_obj']), Post.objects.count()
+            len(response.context['page_obj']), initial_count + 1
         )
 
     def test_post_in_profile(self):
@@ -458,24 +445,27 @@ class FollowViewTest(TestCase):
         self.assertEqual(count_posts_before, count_posts_after)
 
     def test_profile_unfollow(self):
-        """Авторизованный польззователь может удалять
+        """Авторизованный пользователь может удалять
         других пользователей из подписок.
         """
-        count_before = Follow.objects.count()
+        count_before = Follow.objects.filter(
+            author__follower__user=self.author
+        ).count()
         count_posts_before = Post.objects.filter(
             author__follower__user=self.author
         ).count()
-        self.authorized_author.post(
-            reverse('posts:profile_follow', kwargs={
-                'username': f'{self.author_1.username}'
-            })
+        Follow.objects.create(
+            user=self.user,
+            author=self.author,
         )
         self.authorized_author.post(
             reverse('posts:profile_unfollow', kwargs={
-                'username': f'{self.author_1.username}'
+                'username': f'{self.author.username}'
             })
         )
-        count_objects_after = Follow.objects.count()
+        count_objects_after = Follow.objects.filter(
+            author__follower__user=self.author
+        ).count()
         count_posts_after = Post.objects.filter(
             author__follower__user=self.author
         ).count()
