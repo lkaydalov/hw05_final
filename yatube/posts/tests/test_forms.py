@@ -74,7 +74,7 @@ class PostCreateFormTests(TestCase):
         """Проверка полей поста."""
         self.assertEqual(first_object.text, form_data['text'])
         self.assertEqual(
-            first_object.author.username, self.post.author.username
+            first_object.author.username, form_data['author'].username
         )
         self.assertEqual(first_object.group.id, form_data['group'])
         self.assertEqual(
