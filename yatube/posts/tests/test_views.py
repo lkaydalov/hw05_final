@@ -134,6 +134,9 @@ class PostViewTests(TestCase):
 
     def test_post_detail_page_context(self):
         """Проверяем контекст страницы деталей поста."""
+        form_fields = {
+            'text': forms.fields.CharField,
+        }
         self.comment = Comment.objects.create(
             text='test11', author=self.author, post=self.post
         )
@@ -154,6 +157,11 @@ class PostViewTests(TestCase):
         self.assertEqual(
             response.context['comments'][0].id,
             self.comment.id)
+
+        for value, expected in form_fields.items():
+            with self.subTest(value=value):
+                form_field = response.context.get('form').fields.get(value)
+                self.assertIsInstance(form_field, expected)
 
     def test_post_create_page_context(self):
         """Проверяем контекст страницы создания поста."""
@@ -177,6 +185,9 @@ class PostViewTests(TestCase):
         self.assertEqual(
             resposne.context['author'], self.post.author
         )
+        self.assertEqual(
+            resposne.context['page_obj'][0], self.post,
+        )
 
     def test_post_edit_page_context(self):
         """Проверяем контекст страницы редактирования поста."""
@@ -193,6 +204,9 @@ class PostViewTests(TestCase):
                 self.assertIsInstance(form_field, expected)
         self.assertEqual(
             response.context['post'], self.post
+        )
+        self.assertTrue(
+            response.context['is_edit'],
         )
 
     def test_index_cache_20_seconds(self):

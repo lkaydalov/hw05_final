@@ -40,10 +40,9 @@ def profile(request, username):
     """Отображает информацию о профиле пользовалтеля."""
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
-    user = request.user
-    following = user.is_authenticated and author.following.exists(
-    ) and user.follower.exists()
-
+    following = request.user.is_authenticated and author.following.filter(
+        user=request.user
+    ).exists()
     template = 'posts/profile.html'
     context = {
         'author': author,
